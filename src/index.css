@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paper + ink, not the default AI cream/terracotta pairing */
+  --color-paper: #F7F6F1;
+  --color-paper-raised: #FFFFFF;
+  --color-ink: #22282E;
+  --color-ink-soft: #5B6570;
+  --color-hairline: #DBD6C8;
+
+  /* Ledger green as the accent — money, growth, the color of a passbook stamp */
+  --color-ledger: #1F5C4A;
+  --color-ledger-soft: #E7EFE9;
+
+  /* Fixed / Flexible / Incidental distinction carries through the whole app */
+  --color-fixed: #2F4C79;
+  --color-fixed-soft: #E7ECF4;
+  --color-flexible: #9C6B1F;
+  --color-flexible-soft: #F5EDDB;
+  --color-incidental: #6B4C6B;
+  --color-incidental-soft: #EFE6EF;
+
+  --color-warn: #A13D3D;
+  --color-warn-soft: #F5E4E1;
+
+  --font-display: "Fraunces", "Iowan Old Style", ui-serif, serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-figure: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: local("Fraunces");
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-figures {
+  font-family: var(--font-figure);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Ledger leader-dots: the signature element. A name, a dotted leader, an amount —
+   like a paper account book or an old restaurant check. */
+.ledger-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.ledger-leader {
+  flex: 1;
+  border-bottom: 1px dotted var(--color-hairline);
+  margin-bottom: 0.3em;
+  min-width: 1rem;
+}
+
+::selection {
+  background: var(--color-ledger-soft);
+}
+
+/* Focus visibility, not skipped for aesthetics */
+:focus-visible {
+  outline: 2px solid var(--color-ledger);
+  outline-offset: 2px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="password"],
+input:not([type]) {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-paper-raised);
+  padding: 0.5rem 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
