@@ -21,7 +21,7 @@ insert into categories (name, flow_type) values
 
 -- Expense line items
 insert into line_items (name, entity_id, category_id, flow_type, nature, base_amount, base_frequency, payment_method, last_paid_date, notes)
-select v.name, e.id, c.id, 'expense', v.nature, v.amount, 'monthly', v.how_paid, v.last_paid, v.notes
+select v.name, e.id, c.id, 'expense', v.nature, v.amount, 'monthly', v.how_paid, v.last_paid::date, v.notes
 from (values
   ('American Expres Bonvoy ANNUAL FEE - 2006', 'Personal', 'Fees & Charges', 'fixed', 7.92, null, '2023-03-25', null),
   ('American Express Gold ANNUAL FEE - 1000', 'Personal', 'Fees & Charges', 'fixed', 20.83, null, '2023-05-18', null),

@@ -54,6 +54,18 @@ export function useBudgetData() {
     await loadAll()
   }, [loadAll])
 
+  const upsertEntity = useCallback(async (entity) => {
+    const { error } = await supabase.from('entities').upsert(entity)
+    if (error) throw error
+    await loadAll()
+  }, [loadAll])
+
+  const deleteEntity = useCallback(async (id) => {
+    const { error } = await supabase.from('entities').delete().eq('id', id)
+    if (error) throw error
+    await loadAll()
+  }, [loadAll])
+
   const upsertIncidental = useCallback(async (item) => {
     const { error } = await supabase.from('incidentals').upsert(item)
     if (error) throw error
@@ -76,6 +88,8 @@ export function useBudgetData() {
     reload: loadAll,
     upsertLineItem,
     deleteLineItem,
+    upsertEntity,
+    deleteEntity,
     upsertIncidental,
     deleteIncidental,
   }
