@@ -10,13 +10,13 @@ const BLANK = {
   nature: 'fixed',
   base_amount: '',
   base_frequency: 'monthly',
-  payment_method: '',
+  payment_method_id: '',
   last_paid_date: '',
   notes: '',
 }
 
 export default function LineItems({ data }) {
-  const { entities, categories, lineItems, upsertLineItem, deleteLineItem } = data
+  const { entities, categories, lineItems, paymentMethods, upsertLineItem, deleteLineItem } = data
   const [filterEntity, setFilterEntity] = useState('all')
   const [filterNature, setFilterNature] = useState('all')
   const [editing, setEditing] = useState(null) // null | 'new' | item
@@ -44,7 +44,7 @@ export default function LineItems({ data }) {
       nature: item.nature,
       base_amount: item.base_amount,
       base_frequency: item.base_frequency,
-      payment_method: item.payment_method || '',
+      payment_method_id: item.payment_method_id || '',
       last_paid_date: item.last_paid_date || '',
       notes: item.notes || '',
     })
@@ -69,6 +69,7 @@ export default function LineItems({ data }) {
         base_amount: Number(form.base_amount) || 0,
         entity_id: form.entity_id || null,
         category_id: form.category_id || null,
+        payment_method_id: form.payment_method_id || null,
         last_paid_date: form.last_paid_date || null,
       }
       if (editing !== 'new') payload.id = editing
@@ -156,7 +157,9 @@ export default function LineItems({ data }) {
                 options={FREQUENCIES.map((f) => [f.value, f.label])} />
             </Field>
             <Field label="Payment method">
-              <input value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} />
+              <Select value={form.payment_method_id} onChange={(v) => setForm({ ...form, payment_method_id: v })}
+                options={[['', '—'], ...paymentMethods.filter((p) => p.is_active || p.id === form.payment_method_id)
+                  .map((p) => [p.id, p.last4 ? `${p.name} ••${p.last4}` : p.name])]} />
             </Field>
             <Field label="Last paid">
               <input type="date" value={form.last_paid_date || ''} onChange={(e) => setForm({ ...form, last_paid_date: e.target.value })} />

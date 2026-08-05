@@ -9,12 +9,14 @@ import ByEntity from './pages/ByEntity'
 import Upcoming from './pages/Upcoming'
 import Incidentals from './pages/Incidentals'
 import ManageEntities from './pages/ManageEntities'
+import ManagePaymentMethods from './pages/ManagePaymentMethods'
 
 const NAV = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/line-items', label: 'Line items' },
   { to: '/by-entity', label: 'By entity' },
   { to: '/entities', label: 'Manage entities' },
+  { to: '/payment-methods', label: 'Payment methods' },
   { to: '/upcoming', label: 'Upcoming' },
   { to: '/incidentals', label: 'Incidentals' },
 ]
@@ -88,6 +90,7 @@ function AuthedApp() {
             <Route path="/line-items" element={<LineItems data={data} />} />
             <Route path="/by-entity" element={<ByEntity data={data} />} />
             <Route path="/entities" element={<ManageEntities data={data} />} />
+            <Route path="/payment-methods" element={<ManagePaymentMethods data={data} />} />
             <Route path="/upcoming" element={<Upcoming data={data} />} />
             <Route path="/incidentals" element={<Incidentals data={data} />} />
             <Route path="*" element={<Navigate to="/" replace />} />

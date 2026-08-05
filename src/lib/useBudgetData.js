@@ -9,6 +9,7 @@ export function useBudgetData() {
   const [categories, setCategories] = useState([])
   const [lineItems, setLineItems] = useState([])
   const [incidentals, setIncidentals] = useState([])
+  const [paymentMethods, setPaymentMethods] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -16,20 +17,23 @@ export function useBudgetData() {
     setLoading(true)
     setError(null)
     try {
-      const [e, c, li, inc] = await Promise.all([
+      const [e, c, li, inc, pm] = await Promise.all([
         supabase.from('entities').select('*').order('sort_order'),
         supabase.from('categories').select('*').order('name'),
         supabase.from('line_items').select('*').order('name'),
         supabase.from('incidentals').select('*').order('occurred_on', { ascending: false }),
+        supabase.from('payment_methods').select('*').order('name'),
       ])
       if (e.error) throw e.error
       if (c.error) throw c.error
       if (li.error) throw li.error
       if (inc.error) throw inc.error
+      if (pm.error) throw pm.error
       setEntities(e.data || [])
       setCategories(c.data || [])
       setLineItems(li.data || [])
       setIncidentals(inc.data || [])
+      setPaymentMethods(pm.data || [])
     } catch (err) {
       console.error(err)
       setError(err.message || 'Failed to load data')
@@ -66,6 +70,18 @@ export function useBudgetData() {
     await loadAll()
   }, [loadAll])
 
+  const upsertPaymentMethod = useCallback(async (pm) => {
+    const { error } = await supabase.from('payment_methods').upsert(pm)
+    if (error) throw error
+    await loadAll()
+  }, [loadAll])
+
+  const deletePaymentMethod = useCallback(async (id) => {
+    const { error } = await supabase.from('payment_methods').delete().eq('id', id)
+    if (error) throw error
+    await loadAll()
+  }, [loadAll])
+
   const upsertIncidental = useCallback(async (item) => {
     const { error } = await supabase.from('incidentals').upsert(item)
     if (error) throw error
@@ -83,6 +99,7 @@ export function useBudgetData() {
     categories,
     lineItems,
     incidentals,
+    paymentMethods,
     loading,
     error,
     reload: loadAll,
@@ -92,5 +109,7 @@ export function useBudgetData() {
     deleteEntity,
     upsertIncidental,
     deleteIncidental,
+    upsertPaymentMethod,
+    deletePaymentMethod,
   }
 }
