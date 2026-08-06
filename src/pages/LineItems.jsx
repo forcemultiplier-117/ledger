@@ -32,6 +32,7 @@ export default function LineItems({ data }) {
   const [uploadError, setUploadError] = useState(null)
   const [sortKey, setSortKey] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
+  const [groupBy, setGroupBy] = useState('none')
 
   const entityName = (id) => entities.find((e) => e.id === id)?.name || '—'
   const categoryName = (id) => categories.find((c) => c.id === id)?.name || '—'
@@ -75,6 +76,40 @@ export default function LineItems({ data }) {
       setSortDir('asc')
     }
   }
+
+  const paymentMethodName = (id) => paymentMethods.find((p) => p.id === id)?.name || '—'
+
+  const GROUP_ACCESSORS = {
+    entity: (li) => entityName(li.entity_id),
+    category: (li) => categoryName(li.category_id),
+    nature: (li) => (li.nature === 'flexible' ? 'Flexible' : 'Fixed'),
+    frequency: (li) => FREQUENCIES.find((f) => f.value === li.base_frequency)?.label || 'Monthly',
+    payment_method: (li) => paymentMethodName(li.payment_method_id),
+  }
+
+  const groupedSections = useMemo(() => {
+    if (groupBy === 'none') return null
+    const accessor = GROUP_ACCESSORS[groupBy]
+    const groups = new Map()
+    for (const li of sorted) {
+      const label = accessor(li)
+      if (!groups.has(label)) groups.set(label, [])
+      groups.get(label).push(li)
+    }
+    const sections = Array.from(groups.entries()).map(([label, items]) => ({
+      label,
+      items,
+      subtotalMonthly: items.reduce((a, li) => a + toMonthly(li.base_amount, li.base_frequency), 0),
+      subtotalAnnual: items.reduce((a, li) => a + toAnnual(li.base_amount, li.base_frequency), 0),
+    }))
+    // Unassigned ("—") sinks to the bottom regardless of alpha order
+    sections.sort((a, b) => {
+      if (a.label === '—') return 1
+      if (b.label === '—') return -1
+      return a.label.localeCompare(b.label)
+    })
+    return sections
+  }, [sorted, groupBy, paymentMethods])
 
   function startEdit(item) {
     setEditing(item.id)
@@ -193,6 +228,19 @@ export default function LineItems({ data }) {
           <option value="fixed">Fixed only</option>
           <option value="flexible">Flexible only</option>
         </select>
+        <select
+          value={groupBy}
+          onChange={(e) => setGroupBy(e.target.value)}
+          className="rounded-md border px-3 py-1.5 text-sm bg-(--color-paper-raised)"
+          style={{ borderColor: 'var(--color-hairline)' }}
+        >
+          <option value="none">No grouping</option>
+          <option value="entity">Group by entity</option>
+          <option value="category">Group by category</option>
+          <option value="nature">Group by fixed/flexible</option>
+          <option value="frequency">Group by frequency</option>
+          <option value="payment_method">Group by payment method</option>
+        </select>
       </div>
 
       {editing && (
@@ -301,75 +349,123 @@ export default function LineItems({ data }) {
         </Card>
       )}
 
-      <Card className="overflow-x-auto p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-(--color-ink-soft) border-b" style={{ borderColor: 'var(--color-hairline)' }}>
-              <SortableHeader label="Name" sortKey="name" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
-              <SortableHeader label="Entity" sortKey="entity" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
-              <SortableHeader label="Category" sortKey="category" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
-              <SortableHeader label="Nature" sortKey="nature" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
-              <SortableHeader label="Monthly" sortKey="monthly" activeKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-              <SortableHeader label="Annual" sortKey="annual" activeKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-              <SortableHeader label="Frequency" sortKey="frequency" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
-              <th className="px-4 py-3 font-medium">Website</th>
-              <th className="px-4 py-3 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((li) => (
-              <tr key={li.id} className="border-b last:border-0" style={{ borderColor: 'var(--color-hairline)' }}>
-                <td className="px-4 py-2.5">
-                  <span className="inline-flex items-center gap-2">
-                    <Logo name={li.name} domain={li.domain} logoUrl={li.logo_url} />
-                    {li.name}
-                    {li.flow_type === 'income' && <Pill tone="ledger"> income</Pill>}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5 text-(--color-ink-soft)">{entityName(li.entity_id)}</td>
-                <td className="px-4 py-2.5 text-(--color-ink-soft)">{categoryName(li.category_id)}</td>
-                <td className="px-4 py-2.5"><Pill tone={li.nature}>{li.nature}</Pill></td>
-                <td className="px-4 py-2.5 text-right font-figures">
-                  {formatCurrency(toMonthly(li.base_amount, li.base_frequency))}
-                </td>
-                <td className="px-4 py-2.5 text-right font-figures text-(--color-ink-soft)">
-                  {formatCurrency(toAnnual(li.base_amount, li.base_frequency))}
-                </td>
-                <td className="px-4 py-2.5 text-(--color-ink-soft)">
-                  {FREQUENCIES.find((f) => f.value === li.base_frequency)?.label}
-                </td>
-                <td className="px-4 py-2.5">
-                  {li.website ? (
-                    <a
-                      href={li.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline"
-                      style={{ color: 'var(--color-ledger)' }}
-                    >
-                      Visit
-                    </a>
-                  ) : (
-                    <span className="text-(--color-ink-soft)">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                  <button onClick={() => startEdit(li)} className="text-(--color-ledger) mr-3">Edit</button>
-                  <button onClick={() => remove(li.id)} className="text-(--color-warn)">Delete</button>
-                </td>
-              </tr>
-            ))}
-            {sorted.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-(--color-ink-soft)">
-                  No line items match these filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </Card>
+      {groupBy === 'none' ? (
+        <Card className="overflow-x-auto p-0">
+          <LineItemsTable
+            items={sorted}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            toggleSort={toggleSort}
+            entityName={entityName}
+            categoryName={categoryName}
+            startEdit={startEdit}
+            remove={remove}
+            emptyMessage="No line items match these filters."
+          />
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {groupedSections.map((section) => (
+            <Card key={section.label} className="overflow-x-auto p-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--color-hairline)' }}>
+                <span className="font-medium">{section.label}</span>
+                <span className="flex items-center gap-4 text-sm">
+                  <span className="text-(--color-ink-soft)">{section.items.length} item{section.items.length === 1 ? '' : 's'}</span>
+                  <span className="font-figures">{formatCurrency(section.subtotalMonthly)}/mo</span>
+                  <span className="font-figures text-(--color-ink-soft)">{formatCurrency(section.subtotalAnnual)}/yr</span>
+                </span>
+              </div>
+              <LineItemsTable
+                items={section.items}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                toggleSort={toggleSort}
+                entityName={entityName}
+                categoryName={categoryName}
+                startEdit={startEdit}
+                remove={remove}
+              />
+            </Card>
+          ))}
+          {groupedSections.length === 0 && (
+            <Card>
+              <p className="text-sm text-(--color-ink-soft) text-center py-4">No line items match these filters.</p>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function LineItemsTable({ items, sortKey, sortDir, toggleSort, entityName, categoryName, startEdit, remove, emptyMessage }) {
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-(--color-ink-soft) border-b" style={{ borderColor: 'var(--color-hairline)' }}>
+          <SortableHeader label="Name" sortKey="name" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+          <SortableHeader label="Entity" sortKey="entity" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+          <SortableHeader label="Category" sortKey="category" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+          <SortableHeader label="Nature" sortKey="nature" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+          <SortableHeader label="Monthly" sortKey="monthly" activeKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+          <SortableHeader label="Annual" sortKey="annual" activeKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+          <SortableHeader label="Frequency" sortKey="frequency" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+          <th className="px-4 py-3 font-medium">Website</th>
+          <th className="px-4 py-3 font-medium"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((li) => (
+          <tr key={li.id} className="border-b last:border-0" style={{ borderColor: 'var(--color-hairline)' }}>
+            <td className="px-4 py-2.5">
+              <span className="inline-flex items-center gap-2">
+                <Logo name={li.name} domain={li.domain} logoUrl={li.logo_url} />
+                {li.name}
+                {li.flow_type === 'income' && <Pill tone="ledger"> income</Pill>}
+              </span>
+            </td>
+            <td className="px-4 py-2.5 text-(--color-ink-soft)">{entityName(li.entity_id)}</td>
+            <td className="px-4 py-2.5 text-(--color-ink-soft)">{categoryName(li.category_id)}</td>
+            <td className="px-4 py-2.5"><Pill tone={li.nature}>{li.nature}</Pill></td>
+            <td className="px-4 py-2.5 text-right font-figures">
+              {formatCurrency(toMonthly(li.base_amount, li.base_frequency))}
+            </td>
+            <td className="px-4 py-2.5 text-right font-figures text-(--color-ink-soft)">
+              {formatCurrency(toAnnual(li.base_amount, li.base_frequency))}
+            </td>
+            <td className="px-4 py-2.5 text-(--color-ink-soft)">
+              {FREQUENCIES.find((f) => f.value === li.base_frequency)?.label}
+            </td>
+            <td className="px-4 py-2.5">
+              {li.website ? (
+                <a
+                  href={li.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                  style={{ color: 'var(--color-ledger)' }}
+                >
+                  Visit
+                </a>
+              ) : (
+                <span className="text-(--color-ink-soft)">—</span>
+              )}
+            </td>
+            <td className="px-4 py-2.5 text-right whitespace-nowrap">
+              <button onClick={() => startEdit(li)} className="text-(--color-ledger) mr-3">Edit</button>
+              <button onClick={() => remove(li.id)} className="text-(--color-warn)">Delete</button>
+            </td>
+          </tr>
+        ))}
+        {items.length === 0 && emptyMessage && (
+          <tr>
+            <td colSpan={9} className="px-4 py-8 text-center text-(--color-ink-soft)">
+              {emptyMessage}
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
   )
 }
 
