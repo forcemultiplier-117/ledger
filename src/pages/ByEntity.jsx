@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { toMonthly, toAnnual, formatCurrency } from '../lib/frequency'
-import { Card, Pill, SectionTitle, LedgerRow } from '../components/ui'
+import { Card, Pill, SectionTitle, LedgerRow, Logo } from '../components/ui'
 
 export default function ByEntity({ data }) {
   const { entities, lineItems } = data
@@ -67,7 +67,12 @@ export default function ByEntity({ data }) {
                 .slice()
                 .sort((a, b) => toMonthly(b.base_amount, b.base_frequency) - toMonthly(a.base_amount, a.base_frequency))
                 .map((li) => (
-                  <LedgerRow key={li.id} label={li.name} value={toMonthly(li.base_amount, li.base_frequency)} />
+                  <LedgerRow
+                    key={li.id}
+                    label={li.name}
+                    value={toMonthly(li.base_amount, li.base_frequency)}
+                    icon={<Logo name={li.name} domain={li.domain} logoUrl={li.logo_url} size={16} />}
+                  />
                 ))}
             </div>
           </Card>

@@ -1,4 +1,43 @@
 import { formatCurrency } from '../lib/frequency'
+import { faviconUrl } from '../lib/logo'
+import { useState } from 'react'
+
+// Shows an uploaded logo image if present, otherwise a brand favicon
+// (when a domain is set), otherwise a plain initial-letter circle so the
+// table never looks broken for items without either.
+export function Logo({ name, domain, logoUrl, size = 20 }) {
+  const [failed, setFailed] = useState(false)
+  const url = logoUrl || (domain ? faviconUrl(domain, size * 2) : null)
+
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        width={size}
+        height={size}
+        className="rounded-sm inline-block align-middle"
+        style={{ objectFit: 'contain' }}
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+
+  const initial = (name || '?').trim().charAt(0).toUpperCase()
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-sm align-middle text-[10px] font-medium"
+      style={{
+        width: size,
+        height: size,
+        background: 'var(--color-hairline)',
+        color: 'var(--color-ink-soft)',
+      }}
+    >
+      {initial}
+    </span>
+  )
+}
 
 export function Card({ children, className = '' }) {
   return (
@@ -47,7 +86,7 @@ export function Pill({ children, tone = 'ink' }) {
   )
 }
 
-export function LedgerRow({ label, value, tone = 'ink' }) {
+export function LedgerRow({ label, value, tone = 'ink', icon }) {
   const toneColor = {
     ink: 'var(--color-ink)',
     ledger: 'var(--color-ledger)',
@@ -55,7 +94,10 @@ export function LedgerRow({ label, value, tone = 'ink' }) {
   }[tone]
   return (
     <div className="ledger-row py-1.5">
-      <span className="text-sm">{label}</span>
+      <span className="text-sm inline-flex items-center gap-2">
+        {icon}
+        {label}
+      </span>
       <span className="ledger-leader" />
       <span className="font-figures text-sm" style={{ color: toneColor }}>
         {formatCurrency(value)}

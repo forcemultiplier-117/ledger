@@ -35,6 +35,8 @@ create table if not exists line_items (
     base_frequency in ('weekly', 'bi_weekly', 'monthly', 'bi_monthly', 'quarterly', 'semi_annual', 'annual')
   ),
   payment_method text,
+  domain text,
+  logo_url text,
   last_paid_date date,
   notes text,
   is_active boolean not null default true,
@@ -82,3 +84,59 @@ create policy "Authenticated users can do everything on line_items"
   on line_items for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "Authenticated users can do everything on incidentals"
   on incidentals for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- Base table grants — RLS policies above only filter rows once access
+-- exists; without these grants, every query fails with "permission denied"
+-- regardless of the policies.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+-- Adds a managed payment methods table, replacing the free-text
+-- payment_method field on line_items with a proper reference.
+-- Safe to run once, after schema.sql and seed.sql.
+
+create table if not exists payment_methods (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  last4 text,
+  kind text not null default 'credit_card' check (
+    kind in ('credit_card', 'debit_card', 'bank_account', 'other')
+  ),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table line_items add column if not exists payment_method_id uuid references payment_methods(id) on delete set null;
+
+alter table payment_methods enable row level security;
+create policy "Authenticated users can do everything on payment_methods"
+  on payment_methods for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- New table needs its own grant — the earlier grants_fix.sql only covered
+-- tables that existed at the time it ran.
+grant select, insert, update, delete on payment_methods to authenticated;
+
+-- Storage bucket for uploaded line-item logos
+insert into storage.buckets (id, name, public)
+values ('logos', 'logos', true)
+on conflict (id) do nothing;
+
+create policy "Authenticated can upload logos"
+  on storage.objects for insert
+  to authenticated
+  with check (bucket_id = 'logos');
+
+create policy "Authenticated can update logos"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'logos');
+
+create policy "Authenticated can delete logos"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'logos');
+
+create policy "Public can view logos"
+  on storage.objects for select
+  to public
+  using (bucket_id = 'logos');
