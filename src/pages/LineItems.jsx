@@ -26,6 +26,7 @@ export default function LineItems({ data }) {
   const [editing, setEditing] = useState(null) // null | 'new' | item
   const [form, setForm] = useState(BLANK)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
 
@@ -67,6 +68,7 @@ export default function LineItems({ data }) {
     setEditing(null)
     setForm(BLANK)
     setUploadError(null)
+    setSaveError(null)
   }
 
   async function handleFileChange(e) {
@@ -88,6 +90,7 @@ export default function LineItems({ data }) {
   async function save(e) {
     e.preventDefault()
     setSaving(true)
+    setSaveError(null)
     try {
       const payload = {
         ...form,
@@ -102,6 +105,9 @@ export default function LineItems({ data }) {
       if (editing !== 'new') payload.id = editing
       await upsertLineItem(payload)
       cancel()
+    } catch (err) {
+      console.error(err)
+      setSaveError(err.message || 'Failed to save — check the browser console for details')
     } finally {
       setSaving(false)
     }
@@ -231,6 +237,11 @@ export default function LineItems({ data }) {
                 <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </Field>
             </div>
+            {saveError && (
+              <p className="sm:col-span-2 lg:col-span-3 text-sm rounded-md px-3 py-2" style={{ background: 'var(--color-warn-soft)', color: 'var(--color-warn)' }}>
+                {saveError}
+              </p>
+            )}
             <div className="sm:col-span-2 lg:col-span-3 flex gap-3">
               <button type="submit" disabled={saving}
                 className="rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
