@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { FREQUENCIES, toMonthly, toAnnual, formatCurrency } from '../lib/frequency'
-import { Card, Pill, SectionTitle } from '../components/ui'
+import { Card, Pill, SectionTitle, Logo } from '../components/ui'
+import { guessDomain, uploadLogo } from '../lib/logo'
+import { supabase } from '../lib/supabaseClient'
 
 const BLANK = {
   name: '',
@@ -11,6 +13,8 @@ const BLANK = {
   base_amount: '',
   base_frequency: 'monthly',
   payment_method_id: '',
+  domain: '',
+  logo_url: '',
   last_paid_date: '',
   notes: '',
 }
@@ -22,6 +26,8 @@ export default function LineItems({ data }) {
   const [editing, setEditing] = useState(null) // null | 'new' | item
   const [form, setForm] = useState(BLANK)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState(null)
 
   const entityName = (id) => entities.find((e) => e.id === id)?.name || '—'
   const categoryName = (id) => categories.find((c) => c.id === id)?.name || '—'
@@ -45,6 +51,8 @@ export default function LineItems({ data }) {
       base_amount: item.base_amount,
       base_frequency: item.base_frequency,
       payment_method_id: item.payment_method_id || '',
+      domain: item.domain || '',
+      logo_url: item.logo_url || '',
       last_paid_date: item.last_paid_date || '',
       notes: item.notes || '',
     })
@@ -58,6 +66,23 @@ export default function LineItems({ data }) {
   function cancel() {
     setEditing(null)
     setForm(BLANK)
+    setUploadError(null)
+  }
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const url = await uploadLogo(supabase, file)
+      setForm((f) => ({ ...f, logo_url: url }))
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
   }
 
   async function save(e) {
@@ -70,6 +95,8 @@ export default function LineItems({ data }) {
         entity_id: form.entity_id || null,
         category_id: form.category_id || null,
         payment_method_id: form.payment_method_id || null,
+        domain: form.domain.trim() || null,
+        logo_url: form.logo_url || null,
         last_paid_date: form.last_paid_date || null,
       }
       if (editing !== 'new') payload.id = editing
@@ -131,6 +158,41 @@ export default function LineItems({ data }) {
           <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Name">
               <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </Field>
+            <Field label="Logo domain (optional)">
+              <div className="flex gap-2">
+                <input
+                  placeholder="netflix.com"
+                  value={form.domain}
+                  onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, domain: guessDomain(form.name) })}
+                  className="shrink-0 rounded-md px-3 text-sm text-(--color-ink-soft) border"
+                  style={{ borderColor: 'var(--color-hairline)' }}
+                  title="Guess from name"
+                >
+                  Guess
+                </button>
+              </div>
+            </Field>
+            <Field label="Or upload an image (PNG/JPG, no logo online)">
+              <div className="flex items-center gap-3">
+                <Logo name={form.name} domain={form.domain} logoUrl={form.logo_url} size={28} />
+                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleFileChange} className="text-sm" />
+                {form.logo_url && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, logo_url: '' })}
+                    className="text-sm text-(--color-warn)"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              {uploading && <p className="text-xs text-(--color-ink-soft) mt-1">Uploading…</p>}
+              {uploadError && <p className="text-xs mt-1" style={{ color: 'var(--color-warn)' }}>{uploadError}</p>}
             </Field>
             <Field label="Flow">
               <Select value={form.flow_type} onChange={(v) => setForm({ ...form, flow_type: v })}
@@ -201,8 +263,11 @@ export default function LineItems({ data }) {
             {filtered.map((li) => (
               <tr key={li.id} className="border-b last:border-0" style={{ borderColor: 'var(--color-hairline)' }}>
                 <td className="px-4 py-2.5">
-                  {li.name}
-                  {li.flow_type === 'income' && <Pill tone="ledger"> income</Pill>}
+                  <span className="inline-flex items-center gap-2">
+                    <Logo name={li.name} domain={li.domain} logoUrl={li.logo_url} />
+                    {li.name}
+                    {li.flow_type === 'income' && <Pill tone="ledger"> income</Pill>}
+                  </span>
                 </td>
                 <td className="px-4 py-2.5 text-(--color-ink-soft)">{entityName(li.entity_id)}</td>
                 <td className="px-4 py-2.5 text-(--color-ink-soft)">{categoryName(li.category_id)}</td>

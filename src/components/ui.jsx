@@ -26,12 +26,13 @@ export function Logo({ name, domain, logoUrl, size = 20 }) {
   const initial = (name || '?').trim().charAt(0).toUpperCase()
   return (
     <span
-      className="inline-flex items-center justify-center rounded-sm align-middle text-[10px] font-medium"
+      className="inline-flex items-center justify-center rounded-sm align-middle text-[10px] font-semibold"
       style={{
         width: size,
         height: size,
-        background: 'var(--color-hairline)',
-        color: 'var(--color-ink-soft)',
+        background: 'var(--color-ledger-soft)',
+        color: 'var(--color-ledger)',
+        border: '1px solid var(--color-hairline)',
       }}
     >
       {initial}
