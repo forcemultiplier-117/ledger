@@ -37,6 +37,7 @@ create table if not exists line_items (
   payment_method text,
   domain text,
   logo_url text,
+  website text,
   last_paid_date date,
   notes text,
   is_active boolean not null default true,

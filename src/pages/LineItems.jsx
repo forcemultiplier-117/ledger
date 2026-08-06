@@ -15,6 +15,7 @@ const BLANK = {
   payment_method_id: '',
   domain: '',
   logo_url: '',
+  website: '',
   last_paid_date: '',
   notes: '',
 }
@@ -29,6 +30,8 @@ export default function LineItems({ data }) {
   const [saveError, setSaveError] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
+  const [sortKey, setSortKey] = useState('name')
+  const [sortDir, setSortDir] = useState('asc')
 
   const entityName = (id) => entities.find((e) => e.id === id)?.name || '—'
   const categoryName = (id) => categories.find((c) => c.id === id)?.name || '—'
@@ -40,6 +43,38 @@ export default function LineItems({ data }) {
       return true
     })
   }, [lineItems, filterEntity, filterNature])
+
+  const SORT_ACCESSORS = {
+    name: (li) => (li.name || '').toLowerCase(),
+    entity: (li) => entityName(li.entity_id).toLowerCase(),
+    category: (li) => categoryName(li.category_id).toLowerCase(),
+    nature: (li) => li.nature || '',
+    monthly: (li) => toMonthly(li.base_amount, li.base_frequency),
+    annual: (li) => toAnnual(li.base_amount, li.base_frequency),
+    frequency: (li) => FREQUENCIES.find((f) => f.value === li.base_frequency)?.label || '',
+  }
+
+  const sorted = useMemo(() => {
+    const accessor = SORT_ACCESSORS[sortKey] || SORT_ACCESSORS.name
+    const list = [...filtered]
+    list.sort((a, b) => {
+      const av = accessor(a)
+      const bv = accessor(b)
+      if (av < bv) return sortDir === 'asc' ? -1 : 1
+      if (av > bv) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+    return list
+  }, [filtered, sortKey, sortDir])
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
 
   function startEdit(item) {
     setEditing(item.id)
@@ -54,6 +89,7 @@ export default function LineItems({ data }) {
       payment_method_id: item.payment_method_id || '',
       domain: item.domain || '',
       logo_url: item.logo_url || '',
+      website: item.website || '',
       last_paid_date: item.last_paid_date || '',
       notes: item.notes || '',
     })
@@ -100,6 +136,7 @@ export default function LineItems({ data }) {
         payment_method_id: form.payment_method_id || null,
         domain: form.domain.trim() || null,
         logo_url: form.logo_url || null,
+        website: form.website.trim() || null,
         last_paid_date: form.last_paid_date || null,
       }
       if (editing !== 'new') payload.id = editing
@@ -200,6 +237,14 @@ export default function LineItems({ data }) {
               {uploading && <p className="text-xs text-(--color-ink-soft) mt-1">Uploading…</p>}
               {uploadError && <p className="text-xs mt-1" style={{ color: 'var(--color-warn)' }}>{uploadError}</p>}
             </Field>
+            <Field label="Website (optional)">
+              <input
+                type="url"
+                placeholder="https://..."
+                value={form.website}
+                onChange={(e) => setForm({ ...form, website: e.target.value })}
+              />
+            </Field>
             <Field label="Flow">
               <Select value={form.flow_type} onChange={(v) => setForm({ ...form, flow_type: v })}
                 options={[['expense', 'Expense'], ['income', 'Income']]} />
@@ -260,18 +305,19 @@ export default function LineItems({ data }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-(--color-ink-soft) border-b" style={{ borderColor: 'var(--color-hairline)' }}>
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Entity</th>
-              <th className="px-4 py-3 font-medium">Category</th>
-              <th className="px-4 py-3 font-medium">Nature</th>
-              <th className="px-4 py-3 font-medium text-right">Monthly</th>
-              <th className="px-4 py-3 font-medium text-right">Annual</th>
-              <th className="px-4 py-3 font-medium">Frequency</th>
+              <SortableHeader label="Name" sortKey="name" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+              <SortableHeader label="Entity" sortKey="entity" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+              <SortableHeader label="Category" sortKey="category" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+              <SortableHeader label="Nature" sortKey="nature" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+              <SortableHeader label="Monthly" sortKey="monthly" activeKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+              <SortableHeader label="Annual" sortKey="annual" activeKey={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+              <SortableHeader label="Frequency" sortKey="frequency" activeKey={sortKey} dir={sortDir} onClick={toggleSort} />
+              <th className="px-4 py-3 font-medium">Website</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((li) => (
+            {sorted.map((li) => (
               <tr key={li.id} className="border-b last:border-0" style={{ borderColor: 'var(--color-hairline)' }}>
                 <td className="px-4 py-2.5">
                   <span className="inline-flex items-center gap-2">
@@ -292,15 +338,30 @@ export default function LineItems({ data }) {
                 <td className="px-4 py-2.5 text-(--color-ink-soft)">
                   {FREQUENCIES.find((f) => f.value === li.base_frequency)?.label}
                 </td>
+                <td className="px-4 py-2.5">
+                  {li.website ? (
+                    <a
+                      href={li.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                      style={{ color: 'var(--color-ledger)' }}
+                    >
+                      Visit
+                    </a>
+                  ) : (
+                    <span className="text-(--color-ink-soft)">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-right whitespace-nowrap">
                   <button onClick={() => startEdit(li)} className="text-(--color-ledger) mr-3">Edit</button>
                   <button onClick={() => remove(li.id)} className="text-(--color-warn)">Delete</button>
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-(--color-ink-soft)">
+                <td colSpan={9} className="px-4 py-8 text-center text-(--color-ink-soft)">
                   No line items match these filters.
                 </td>
               </tr>
@@ -309,6 +370,23 @@ export default function LineItems({ data }) {
         </table>
       </Card>
     </div>
+  )
+}
+
+function SortableHeader({ label, sortKey, activeKey, dir, onClick, align = 'left' }) {
+  const isActive = activeKey === sortKey
+  return (
+    <th
+      className={`px-4 py-3 font-medium cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
+      onClick={() => onClick(sortKey)}
+    >
+      <span className="inline-flex items-center gap-1" style={{ flexDirection: align === 'right' ? 'row-reverse' : 'row' }}>
+        {label}
+        <span style={{ color: isActive ? 'var(--color-ledger)' : 'var(--color-hairline)' }}>
+          {isActive ? (dir === 'asc' ? '▲' : '▼') : '▲'}
+        </span>
+      </span>
+    </th>
   )
 }
 
