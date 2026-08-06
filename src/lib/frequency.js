@@ -10,6 +10,7 @@ export const FREQUENCIES = [
   { value: 'quarterly', label: 'Quarterly', perYear: 4 },
   { value: 'semi_annual', label: 'Semi-annual', perYear: 2 },
   { value: 'annual', label: 'Annual', perYear: 1 },
+  { value: 'biennial', label: 'Biennial (every 2 years)', perYear: 0.5 },
 ]
 
 const PER_YEAR = Object.fromEntries(FREQUENCIES.map((f) => [f.value, f.perYear]))
@@ -64,6 +65,7 @@ export function nextDueDate(lastPaidDate, frequency) {
     quarterly: () => d.setMonth(d.getMonth() + 3),
     semi_annual: () => d.setMonth(d.getMonth() + 6),
     annual: () => d.setFullYear(d.getFullYear() + 1),
+    biennial: () => d.setFullYear(d.getFullYear() + 2),
   }
   const step = map[frequency]
   if (!step) return null
