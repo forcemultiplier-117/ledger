@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { FREQUENCIES, toMonthly, formatCurrency } from '../lib/frequency'
+import { FREQUENCIES, toMonthly, toAnnual, formatCurrency } from '../lib/frequency'
 import { Card, Pill, SectionTitle } from '../components/ui'
 
 const BLANK = {
@@ -192,6 +192,7 @@ export default function LineItems({ data }) {
               <th className="px-4 py-3 font-medium">Category</th>
               <th className="px-4 py-3 font-medium">Nature</th>
               <th className="px-4 py-3 font-medium text-right">Monthly</th>
+              <th className="px-4 py-3 font-medium text-right">Annual</th>
               <th className="px-4 py-3 font-medium">Frequency</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -209,6 +210,9 @@ export default function LineItems({ data }) {
                 <td className="px-4 py-2.5 text-right font-figures">
                   {formatCurrency(toMonthly(li.base_amount, li.base_frequency))}
                 </td>
+                <td className="px-4 py-2.5 text-right font-figures text-(--color-ink-soft)">
+                  {formatCurrency(toAnnual(li.base_amount, li.base_frequency))}
+                </td>
                 <td className="px-4 py-2.5 text-(--color-ink-soft)">
                   {FREQUENCIES.find((f) => f.value === li.base_frequency)?.label}
                 </td>
@@ -220,7 +224,7 @@ export default function LineItems({ data }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-(--color-ink-soft)">
+                <td colSpan={8} className="px-4 py-8 text-center text-(--color-ink-soft)">
                   No line items match these filters.
                 </td>
               </tr>
