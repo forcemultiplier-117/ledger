@@ -32,7 +32,7 @@ create table if not exists line_items (
   nature text not null check (nature in ('fixed', 'flexible')),
   base_amount numeric(12, 2) not null default 0,
   base_frequency text not null check (
-    base_frequency in ('weekly', 'bi_weekly', 'monthly', 'bi_monthly', 'quarterly', 'semi_annual', 'annual', 'biennial')
+    base_frequency in ('weekly', 'bi_weekly', 'semi_monthly', 'monthly', 'bi_monthly', 'quarterly', 'semi_annual', 'annual', 'biennial')
   ),
   payment_method text,
   domain text,

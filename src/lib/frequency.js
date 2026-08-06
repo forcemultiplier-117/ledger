@@ -5,6 +5,7 @@
 export const FREQUENCIES = [
   { value: 'weekly', label: 'Weekly', perYear: 52 },
   { value: 'bi_weekly', label: 'Bi-weekly', perYear: 26 },
+  { value: 'semi_monthly', label: 'Semi-monthly (twice a month)', perYear: 24 },
   { value: 'monthly', label: 'Monthly', perYear: 12 },
   { value: 'bi_monthly', label: 'Bi-monthly (every 2 mo)', perYear: 6 },
   { value: 'quarterly', label: 'Quarterly', perYear: 4 },
@@ -60,6 +61,7 @@ export function nextDueDate(lastPaidDate, frequency) {
   const map = {
     weekly: () => d.setDate(d.getDate() + 7),
     bi_weekly: () => d.setDate(d.getDate() + 14),
+    semi_monthly: () => d.setDate(d.getDate() + 15), // approximate — true semi-monthly (e.g. 1st/15th) isn't evenly spaced
     monthly: () => d.setMonth(d.getMonth() + 1),
     bi_monthly: () => d.setMonth(d.getMonth() + 2),
     quarterly: () => d.setMonth(d.getMonth() + 3),
