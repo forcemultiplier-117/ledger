@@ -82,6 +82,18 @@ export function useBudgetData() {
     await loadAll()
   }, [loadAll])
 
+  const upsertCategory = useCallback(async (category) => {
+    const { error } = await supabase.from('categories').upsert(category)
+    if (error) throw error
+    await loadAll()
+  }, [loadAll])
+
+  const deleteCategory = useCallback(async (id) => {
+    const { error } = await supabase.from('categories').delete().eq('id', id)
+    if (error) throw error
+    await loadAll()
+  }, [loadAll])
+
   const upsertIncidental = useCallback(async (item) => {
     const { error } = await supabase.from('incidentals').upsert(item)
     if (error) throw error
@@ -111,5 +123,7 @@ export function useBudgetData() {
     deleteIncidental,
     upsertPaymentMethod,
     deletePaymentMethod,
+    upsertCategory,
+    deleteCategory,
   }
 }
